@@ -1,0 +1,38 @@
+Bootstrap: debootstrap
+OSVersion: xenial
+MirrorURL: http://archive.ubuntu.com/ubuntu/
+
+%post
+# Install R
+mirror="deb https://cloud.r-project.org/bin/linux/ubuntu xenial/"
+echo $mirror > /etc/apt/sources.list.d/r-cran.list
+apt-get install -y apt-transport-https
+key=E084DAB9
+apt-key finger | grep -q $key || \
+    apt-key adv --keyserver keyserver.ubuntu.com --recv-keys $key
+apt-get update
+apt-get install -y \
+    r-base-dev \
+    libssl-dev \
+    libcurl4-openssl-dev \
+    libxml2-dev
+apt-get clean
+
+# Install kmap
+R -q --vanilla <<EOF
+options(repos = structure(c(CRAN = "https://cloud.r-project.org/")))
+
+if (! requireNamespace("BiocInstaller", quietly = TRUE))
+    source("https://bioconductor.org/biocLite.R")
+
+if (! requireNamespace("devtools", quietly = TRUE))
+    install.packages("devtools")
+
+if (! requireNamespace("kmap", quietly = TRUE))
+    devtools::install_github(
+        "coregenomics/kmap",
+	repos = BiocInstaller::biocinstallRepos())
+EOF
+
+%test
+Rscript -e ?kmap::kmap | cat
